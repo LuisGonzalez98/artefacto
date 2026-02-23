@@ -1,0 +1,57 @@
+# ── Entorno y secretos ──────────────────────────────────────
+.env
+
+# ── Datos generados / ignorar binarios grandes ─────────────
+data/chroma_db/
+output/*.docx
+output/run.log
+
+# ── Python ──────────────────────────────────────────────────
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.egg-info/
+dist/
+build/
+*.egg
+.eggs/
+
+# ── Entornos virtuales ───────────────────────────────────────
+.venv/
+venv/
+env/
+ENV/
+
+# ── IDEs ────────────────────────────────────────────────────
+.vscode/
+.idea/
+*.suo
+*.user
+
+# ── Sistema operativo ───────────────────────────────────────
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# Windows
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+
+# Linux
+*~
+
+# ── Jupyter ─────────────────────────────────────────────────
+.ipynb_checkpoints/
+*.ipynb
+
+# ── Logs ────────────────────────────────────────────────────
+*.log
+
+# ── Datos y bases locales ─────────────────────────
+data/
+db/
+output/

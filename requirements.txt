@@ -1,0 +1,23 @@
+# ── LLM / LangChain ─────────────────────────────────────────
+langchain==0.3.19
+langchain-community==0.3.19
+langchain-ollama==0.2.3
+langchain-chroma==0.2.4
+
+# ── Vector store ────────────────────────────────────────────
+chromadb==0.6.3
+
+# ── PostgreSQL ───────────────────────────────────────────────
+# psycopg2-binary incluye el driver compilado (no requiere libpq instalado)
+psycopg2-binary==2.9.10
+sqlalchemy==2.0.40
+
+# ── Carga de documentos ─────────────────────────────────────
+pypdf==5.4.0
+unstructured==0.17.2
+
+# ── Generación de Word ───────────────────────────────────────
+python-docx==1.1.2
+
+# ── Configuración y utilidades ──────────────────────────────
+python-dotenv==1.0.1
