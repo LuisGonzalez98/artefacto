@@ -6,6 +6,7 @@ Uso:
     python main.py --discover-schema   # Solo muestra el esquema de la BD y sale
     python main.py --no-judge          # Omite la evaluación del LLM Judge
     python main.py --reingest          # Re-ingesta todos los documentos RAG
+    python main.py --stats             # Muestra estadísticas LLMOps históricas
 
 El pipeline completo:
     1. Verifica conexión a PostgreSQL
@@ -48,6 +49,7 @@ Ejemplos:
   python main.py --no-judge              # Sin evaluación automática
   python main.py --reingest              # Re-ingestar documentos RAG
   python main.py --question "¿Cuántas portaciones hubo en Q4 2024?"
+  python main.py --stats                 # Ver métricas LLMOps históricas
         """,
     )
     parser.add_argument(
@@ -70,6 +72,11 @@ Ejemplos:
         type=str,
         default=None,
         help="Pregunta de análisis personalizada (usa la pregunta por defecto si no se especifica)",
+    )
+    parser.add_argument(
+        "--stats",
+        action="store_true",
+        help="Muestra estadísticas LLMOps de todas las ejecuciones previas y sale",
     )
     return parser.parse_args()
 
@@ -139,12 +146,20 @@ def cmd_reingest() -> None:
     logger.info("Re-ingestación completada.")
 
 
+def cmd_stats() -> None:
+    """Modo --stats: muestra estadísticas LLMOps históricas y sale."""
+    from llmops.tracker import RunStats
+    stats = RunStats()
+    stats.print_report()
+
+
 def cmd_run_pipeline(question: str, include_judge: bool) -> None:
     """Modo normal: ejecuta el pipeline completo."""
     from db.postgres_client import test_connection
     from agents.orquestador import Orquestador
     from judge.llm_judge import LLMJudge
     from output.word_generator import build_word_document
+    from llmops.tracker import RunTracker
     import config
 
     logger = logging.getLogger(__name__)
@@ -193,6 +208,11 @@ def cmd_run_pipeline(question: str, include_judge: bool) -> None:
     else:
         logger.info("Evaluación de juez omitida (--no-judge)")
 
+    # Registrar run en el log LLMOps
+    tracker = RunTracker()
+    run_id = tracker.record_run(ctx, judge_result)
+    logger.info(f"[LLMOps] Run ID: {run_id}")
+
     # Generar documento Word
     print("\nGenerando documento Word...")
     output_path = build_word_document(ctx, judge_result)
@@ -220,6 +240,10 @@ def main() -> None:
 
     if args.discover_schema:
         cmd_discover_schema()
+        return
+
+    if args.stats:
+        cmd_stats()
         return
 
     if args.reingest:

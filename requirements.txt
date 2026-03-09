@@ -1,23 +1,28 @@
 # ── LLM / LangChain ─────────────────────────────────────────
-langchain==0.3.19
-langchain-community==0.3.19
-langchain-ollama==0.2.3
-langchain-chroma==0.2.4
+langchain==1.2.10
+langchain-community==0.4.1
+langchain-ollama==1.0.1
+langchain-chroma==1.1.0
 
 # ── Vector store ────────────────────────────────────────────
-chromadb==0.6.3
+chromadb==1.5.4
 
 # ── PostgreSQL ───────────────────────────────────────────────
-# psycopg2-binary incluye el driver compilado (no requiere libpq instalado)
+# Si falla la compilación, usar: pip install psycopg2-binary --only-binary=:all:
 psycopg2-binary==2.9.10
 sqlalchemy==2.0.40
 
 # ── Carga de documentos ─────────────────────────────────────
-pypdf==5.4.0
-unstructured==0.17.2
+pypdf==6.8.0
 
 # ── Generación de Word ───────────────────────────────────────
-python-docx==1.1.2
+python-docx==1.2.0
 
 # ── Configuración y utilidades ──────────────────────────────
-python-dotenv==1.0.1
+python-dotenv==1.2.2
+
+# ── Tests ────────────────────────────────────────────────────
+pytest==9.0.2
+
+# ── Evaluación de prompts (promptfoo requiere Node.js aparte) ─
+# Instalar promptfoo con: npm install -g promptfoo

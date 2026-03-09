@@ -63,7 +63,7 @@ Integra el análisis del Agente Regulatorio sobre las implicaciones legales de l
 Síntesis ejecutiva del cumplimiento de la Medida 83 y recomendaciones concretas.
 
 Instrucciones de estilo:
-- Español formal, estilo técnico-regulatorio (como los documentos oficiales del IFT)
+- Español formal, estilo técnico-regulatorio (como los documentos oficiales de un regulador de Telecomunicaciones)
 - Usa referencias cruzadas: "De conformidad con la Medida 83..." / "Como se señala en la sección anterior..."
 - Integra las cifras del Agente Datos con las citas del Agente Regulatorio de forma fluida
 - El texto debe ser autocontenido: un lector sin contexto adicional debe comprenderlo

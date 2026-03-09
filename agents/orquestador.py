@@ -21,6 +21,7 @@ eso lo hace main.py para mantener las responsabilidades separadas.
 """
 
 import logging
+import time
 from dataclasses import dataclass, field
 from datetime import datetime
 from pathlib import Path
@@ -59,6 +60,7 @@ class RunContext:
     redactor_result: Optional[AgentResult] = None
     judge_result: Optional[dict] = None
     output_path: Optional[Path] = None
+    agent_timings: dict = field(default_factory=dict)  # {agent_name: seconds}
 
     @property
     def all_agents_succeeded(self) -> bool:
@@ -131,27 +133,34 @@ class Orquestador:
 
         # ── Etapa 1: Análisis de datos ────────────────────────────
         logger.info("── Etapa 1/3: AgenteDatos ──")
+        _t0 = time.perf_counter()
         ctx.datos_result = self.agente_datos._safe_run(question=question)
+        ctx.agent_timings["AgenteDatos"] = round(time.perf_counter() - _t0, 2)
         self._log_stage_result("AgenteDatos", ctx.datos_result)
 
         # ── Etapa 2: Contexto regulatorio ─────────────────────────
         logger.info("── Etapa 2/3: AgenteRegulatorio ──")
+        _t0 = time.perf_counter()
         ctx.regulatorio_result = self.agente_regulatorio._safe_run(
             question=question,
             datos_result=ctx.datos_result.content,
         )
+        ctx.agent_timings["AgenteRegulatorio"] = round(time.perf_counter() - _t0, 2)
         self._log_stage_result("AgenteRegulatorio", ctx.regulatorio_result)
 
         # ── Etapa 3: Redacción del informe ────────────────────────
         logger.info("── Etapa 3/3: AgenteRedactor ──")
+        _t0 = time.perf_counter()
         ctx.redactor_result = self.agente_redactor._safe_run(
             question=question,
             datos_result=ctx.datos_result.content,
             regulatorio_result=ctx.regulatorio_result.content,
         )
+        ctx.agent_timings["AgenteRedactor"] = round(time.perf_counter() - _t0, 2)
         self._log_stage_result("AgenteRedactor", ctx.redactor_result)
 
-        logger.info(f"=== Pipeline completado ===\n{ctx.summary()}")
+        timings_str = " | ".join(f"{k}: {v}s" for k, v in ctx.agent_timings.items())
+        logger.info(f"=== Pipeline completado | Latencias: {timings_str} ===\n{ctx.summary()}")
         return ctx
 
     def _log_stage_result(self, stage_name: str, result: AgentResult) -> None:
