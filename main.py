@@ -83,7 +83,7 @@ Ejemplos:
 
 # Pregunta de análisis por defecto sobre Medida 83
 DEFAULT_QUESTION = (
-    "Analiza el cumplimiento de la Medida 83 del IFT (CTOGÉSIMA TERCERA) para el período "
+    "Analiza el cumplimiento de la Medida 83 del IFT (OCTOGÉSIMA TERCERA) para el período "
     "más reciente disponible en la base de datos. Calcula: "
     "(1) total de portaciones ejecutadas, "
     "(2) número y porcentaje de casos donde el Agente Económico Preponderante "
