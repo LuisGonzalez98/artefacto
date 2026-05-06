@@ -128,7 +128,6 @@ medida_83 - artefacto/
 ├── config.py                  # Configuración global (rutas, modelos, constantes)
 ├── requirements.txt           # Dependencias Python
 ├── .env.example               # Plantilla de variables de entorno (sin keys reales)
-├── .env                       # Tu API key (NO se sube a git)
 │
 ├── agents/
 │   ├── agente_datos.py        # Agente 1: 12 consultas SQL + HHI + regresión + proyección
