@@ -53,7 +53,7 @@ URL_INST      = "www.gob.mx/crt"
 MEDIDA_NOMBRE = "Medida Octogésima Tercera (Medida 83)"
 
 # Colores para Word
-COLOR_PRIMARIO    = (0,  51, 102)   # azul oscuro institucional
+COLOR_PRIMARIO    = (19, 50, 43)    # verde institucional
 COLOR_SECUNDARIO  = (102, 102, 102) # gris
 COLOR_ACENTO      = (192, 0, 0)     # rojo para advertencias
 COLOR_VERDE       = (0, 112, 0)
@@ -65,5 +65,5 @@ COLOR_REDACTOR    = COLOR_ACENTO
 COLOR_JUDGE       = COLOR_MORADO
 
 # Hex para matplotlib
-COLOR_PRIMARIO_HEX   = "#003366"
-COLOR_SECUNDARIO_HEX = "#666666"
+COLOR_PRIMARIO_HEX   = "#691C32"
+COLOR_SECUNDARIO_HEX = "#B89B5E"
