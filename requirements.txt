@@ -1,28 +1,9 @@
-# ── LLM / LangChain ─────────────────────────────────────────
-langchain==1.2.10
-langchain-community==0.4.1
-langchain-ollama==1.0.1
-langchain-chroma==1.1.0
-
-# ── Vector store ────────────────────────────────────────────
-chromadb==1.5.4
-
-# ── PostgreSQL ───────────────────────────────────────────────
-# Si falla la compilación, usar: pip install psycopg2-binary --only-binary=:all:
-psycopg2-binary==2.9.10
-sqlalchemy==2.0.40
-
-# ── Carga de documentos ─────────────────────────────────────
-pypdf==6.8.0
-
-# ── Generación de Word ───────────────────────────────────────
-python-docx==1.2.0
-
-# ── Configuración y utilidades ──────────────────────────────
-python-dotenv==1.2.2
-
-# ── Tests ────────────────────────────────────────────────────
-pytest==9.0.2
-
-# ── Evaluación de prompts (promptfoo requiere Node.js aparte) ─
-# Instalar promptfoo con: npm install -g promptfoo
+huggingface_hub>=0.23.0
+groq>=0.9.0
+python-docx>=1.0.0
+python-dotenv>=1.0.0
+scikit-learn>=1.3.0
+pypdf>=4.0.0
+matplotlib>=3.7.0
+numpy>=1.24.0
+openpyxl>=3.1.0

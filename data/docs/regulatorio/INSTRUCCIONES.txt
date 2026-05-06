@@ -1,0 +1,12 @@
+Coloca aquí los PDFs o archivos .txt con la normativa del IFT relevante para la Medida 83.
+
+Ejemplos de documentos útiles:
+  - Resolución IFT que contiene la Medida 83 (Octogésima Tercera)
+  - Reglas de Portabilidad Numérica del IFT
+  - Lineamientos sobre medidas asimétricas al AEP
+  - Acuerdos y modificaciones relacionados con la portabilidad
+
+Formatos aceptados: .pdf  y  .txt
+
+El sistema lee automáticamente todos los archivos de esta carpeta al ejecutarse.
+Si la carpeta está vacía, el agente usa el contexto normativo embebido en el código.

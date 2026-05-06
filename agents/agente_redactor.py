@@ -1,149 +1,196 @@
 """
-agente_redactor.py — Agente redactor del informe final (texto ROJO).
+agente_redactor.py — Narrativa institucional Secciones 3-9 del informe DG-VRA/CRT.
 
-Recibe los outputs de los otros dos agentes y los sintetiza en una
-narrativa formal apropiada para un informe regulatorio oficial.
-
-El agente usa RAG sobre plantillas de redacción (data/docs/plantillas/)
-para mantener consistencia de estilo con documentos oficiales.
-
-Temperatura 0.3 (ligeramente más alta que los otros agentes) para producir
-prosa más fluida y menos repetitiva, manteniendo la fidelidad a los hechos.
-
-Estructura del informe producido:
-1. Antecedentes y base legal
-2. Metodología de análisis
-3. Hallazgos principales (con cifras del Agente Datos)
-4. Marco regulatorio aplicable (del Agente Regulatorio)
-5. Conclusiones y recomendaciones
+Usa formato de marcadores de sección (===S3===, ===S8===, etc.) en lugar de JSON
+para evitar problemas de escape con modelos pequeños. word_generator lo parsea con regex.
 """
 
 import logging
-from langchain_core.prompts import ChatPromptTemplate
-from langchain_core.output_parsers import StrOutputParser
+import re
 
-from agents.base_agent import BaseAgent, AgentResult
-from rag.rag_redactor import get_plantillas_retriever
+import config
+from utils import llm_client
+from utils.context import AgentResult
 
 logger = logging.getLogger(__name__)
 
-SYSTEM_PROMPT = """Eres el Agente Redactor, especialista en la producción de informes regulatorios formales del sector de telecomunicaciones en México.
+SYSTEM_PROMPT = """Eres el sistema SGIRA (Sistema Generador de Informes de Análisis Regulatorio) de la
+Dirección General de Vigilancia de Regulación Asimétrica (DG-VRA) de la Comisión Reguladora de
+Telecomunicaciones (CRT) de México.
 
-=== FRAGMENTOS DE PLANTILLAS Y GUÍAS DE ESTILO ===
-{template_context}
-=== FIN DE PLANTILLAS ===
+IDENTIDAD INSTITUCIONAL:
+- Institución: COMISIÓN REGULADORA DE TELECOMUNICACIONES (CRT)
+- Dependencia: Dirección General de Vigilancia de Regulación Asimétrica (DG-VRA)
+- Tono: impersonal institucional — "esta Dirección General", "el análisis revela", "se observa"
+- Condicional epistémico OBLIGATORIO: "podría indicar", "sugiere", "es consistente con"
 
-=== ANÁLISIS DE DATOS (Agente Datos) ===
-{datos_result}
-=== FIN DE ANÁLISIS DE DATOS ===
+REGLAS ABSOLUTAS:
+1. Prosa técnico-jurídica institucional continua. CERO viñetas, CERO listas, CERO guiones.
+2. Sin markdown: sin #, sin *, sin **, sin _, sin corchetes.
+3. NO menciones tablas, gráficas, inteligencia artificial ni modelo de lenguaje.
+4. Separación estricta: los datos son INDICADORES POTENCIALES; la infracción requiere investigación.
+5. Responde ÚNICAMENTE con los marcadores de sección y el texto indicado. NADA más."""
 
-=== CONTEXTO REGULATORIO (Agente Regulatorio) ===
-{regulatorio_result}
-=== FIN DE CONTEXTO REGULATORIO ===
 
-Redacta la sección narrativa del Informe de Cumplimiento de la Medida 83 con la siguiente estructura:
+def _parse_sections(raw: str) -> dict:
+    """Extrae secciones del formato ===KEY=== seguido de texto plano."""
+    result = {}
+    parts = re.split(r'===([A-Z0-9_]+)===', raw)
+    for i in range(1, len(parts), 2):
+        if i + 1 < len(parts):
+            key = parts[i].lower()
+            result[key] = parts[i + 1].strip()
+    return result
 
-**I. ANTECEDENTES Y BASE LEGAL**
-Describe brevemente la Medida 83 y su propósito. Cita la normativa aplicable usando las referencias del Agente Regulatorio.
 
-**II. METODOLOGÍA DE ANÁLISIS**
-Explica cómo se analizaron los datos de portabilidad para verificar el cumplimiento de la ventana de 60 días. Menciona las fuentes de datos utilizadas.
+def run(question: str, datos_content: str = "", regulatorio_content: str = "",
+        metadata: dict | None = None) -> AgentResult:
+    logger.info("AgenteRedactor: generando secciones 3-9...")
+    meta = metadata or {}
+    print(f"  Inputs: datos={len(datos_content):,} chars | regulatorio={len(regulatorio_content):,} chars")
+    modelo = config.GROQ_MODEL if config.LLM_PROVIDER == "groq" else config.HF_MODEL
+    print(f"  Enviando al LLM ({modelo})...")
+    try:
+        content = _write_sections(question, datos_content, regulatorio_content, meta)
+        return AgentResult(agent_name="AgenteRedactor", content=content, succeeded=True)
+    except Exception as e:
+        logger.error(f"AgenteRedactor error: {e}", exc_info=True)
+        print(f"  [ERROR] {e}")
+        return AgentResult(agent_name="AgenteRedactor",
+                           content=f"ERROR:{e}", succeeded=False, error=str(e))
 
-**III. HALLAZGOS PRINCIPALES**
-Presenta con precisión los datos cuantitativos del Agente Datos:
-- Cifras totales de portaciones en el periodo analizado
-- Número y porcentaje de casos de contacto prohibido
-- Desglose por operador/concesionario si está disponible
-- Tendencia temporal del incumplimiento
 
-**IV. MARCO REGULATORIO Y CONSECUENCIAS**
-Integra el análisis del Agente Regulatorio sobre las implicaciones legales de los hallazgos.
+def _fmt(meta: dict) -> str:
+    ret60   = meta.get("retornos_60", 0)
+    tasa    = meta.get("tasa", 0.0)
+    hhi     = meta.get("hhi", 0.0)
+    hhi_cat = meta.get("hhi_categoria", "")
+    periodo = meta.get("periodo", "2023-2024")
+    reg     = meta.get("regresion", {})
+    tend    = reg.get("tendencia", "estable")
+    slope   = reg.get("pendiente", 0)
+    r2      = reg.get("r_cuadrado", 0)
+    pval    = reg.get("p_valor", 1.0)
+    proy    = meta.get("proyeccion", [])
+    proy_str = "; ".join(
+        f"{p['mes']}: {p['proyeccion']:,} indicadores (IC {p['ic_inf']}-{p['ic_sup']})"
+        for p in proy
+    )
+    top_op = meta.get("ind_por_op", [])
+    top_str = "; ".join(
+        f"{r.get('operador','?')}: {r.get('indicadores',0):,} casos ({r.get('pct_total',0):.1f}%)"
+        for r in top_op[:3]
+    )
+    return (
+        f"Periodo: {periodo}. Indicadores potenciales (retornos AEP en <=60 dias): {ret60:,}. "
+        f"Tasa sobre salidas del AEP: {tasa:.2f}%. HHI: {hhi:.0f} ({hhi_cat}). "
+        f"Principales operadores intermedios: {top_str}. "
+        f"Tendencia estadistica: {tend} (pendiente={slope}, R2={r2}, p-valor={pval}). "
+        f"Proyeccion 3 meses: {proy_str}."
+    )
 
-**V. CONCLUSIONES Y RECOMENDACIONES**
-Síntesis ejecutiva del cumplimiento de la Medida 83 y recomendaciones concretas.
 
-Instrucciones de estilo:
-- Español formal, estilo técnico-regulatorio (como los documentos oficiales de un regulador de Telecomunicaciones)
-- Usa referencias cruzadas: "De conformidad con la Medida 83..." / "Como se señala en la sección anterior..."
-- Integra las cifras del Agente Datos con las citas del Agente Regulatorio de forma fluida
-- El texto debe ser autocontenido: un lector sin contexto adicional debe comprenderlo
-- Longitud objetivo: 500-700 palabras en el cuerpo del informe
-- No repitas literalmente los textos de los agentes; sintetiza e integra
+def _call(prompt: str, max_tokens: int) -> str:
+    return llm_client.chat(
+        messages=[
+            {"role": "system", "content": SYSTEM_PROMPT},
+            {"role": "user",   "content": prompt},
+        ],
+        max_tokens=max_tokens,
+    )
 
-Pregunta que originó el análisis: {question}
+
+def _write_sections(question: str, datos_content: str,
+                    regulatorio_content: str, meta: dict) -> str:
+    datos = _fmt(meta)
+
+    # ── Llamada 1 / 2: Secciones 3-7 ────────────────────────────────
+    prompt_a = f"""Redacta las secciones 3, 4, 5, 6 y 7 del informe DG-VRA/CRT sobre la Medida 83.
+Cada seccion: 80-100 palabras de prosa institucional continua.
+
+DATOS CLAVE: {datos}
+CONTEXTO: {datos_content[:400] if datos_content else ''}
+
+Responde EXACTAMENTE con este formato (escribe el texto de cada seccion despues del marcador):
+
+===S3===
+[Objeto y Metodologia: que se mide, por que son indicadores indirectos, limitaciones metodologicas, necesidad de validacion humana antes de producir efectos regulatorios]
+
+===S4===
+[Calidad de Datos: completitud de la base de datos, niveles de nulos, implicaciones para la robustez del analisis]
+
+===S5===
+[Concentracion de Mercado: interpretacion del HHI calculado, clasificacion del mercado, relevancia de la Medida 83 dado el nivel de concentracion]
+
+===S5_HHI===
+[Parrafo adicional HHI: distribucion de portaciones por operador receptor, justificacion de la medida asimetrica]
+
+===S6===
+[Parrafo introductorio de la seccion de Portabilidad: alcance del analisis cuantitativo de indicadores potenciales]
+
+===S6_1===
+[Universo Regulatorio: total TIPO_6, portaciones con AEP como donador, pares ida-vuelta identificados, retornos en 60 dias o menos]
+
+===S6_2===
+[Indicadores por Operador Receptor: distribucion por operador intermedio, dias promedio de retorno, implicaciones regulatorias del patron observado]
+
+===S6_3===
+[Distribucion por Rango de Dias: patron de retornos en los distintos rangos temporales, que sugiere la concentracion en rangos cortos]
+
+===S6_4===
+[Tendencia Mensual: evolucion mensual de indicadores, periodos de mayor concentracion, tendencia general del fenomeno]
+
+===S6_5===
+[Muestra de Casos con Mayor Inmediatez: interpretacion de los retornos mas rapidos y su relevancia regulatoria]
+
+===S7===
+[Analisis Estadistico: interpretacion de la regresion lineal, pendiente, R2, p-valor, significado sobre la evolucion del fenomeno]
+
+===S7_1===
+[Proyeccion 3 Meses: implicaciones para la planificacion regulatoria, incertidumbre del modelo proyectivo]
 """
 
+    print("  [Llamada 1/2] Secciones 3-7...")
+    raw_a = _call(prompt_a, max_tokens=1400)
+    secs_a = _parse_sections(raw_a)
+    print(f"  Llamada 1: {len(secs_a)} secciones — {list(secs_a.keys())}")
 
-class AgenteRedactor(BaseAgent):
-    """
-    Agente de redacción del informe narrativo final.
+    # ── Llamada 2 / 2: Secciones 8-9 ────────────────────────────────
+    prompt_b = f"""Redacta las secciones 8 y 9 del informe DG-VRA/CRT sobre la Medida 83.
 
-    Produce texto en color ROJO en el documento Word final.
-    """
+DATOS CLAVE: {datos}
+MARCO REGULATORIO: {regulatorio_content[:350] if regulatorio_content else ''}
 
-    def __init__(self):
-        # Temperatura ligeramente más alta para prosa más fluida
-        super().__init__(temperature=0.3)
-        self.retriever = get_plantillas_retriever()
+Responde EXACTAMENTE con este formato (escribe el texto de cada seccion despues del marcador):
 
-    def run(
-        self,
-        question: str,
-        datos_result: str,
-        regulatorio_result: str,
-    ) -> AgentResult:
-        """
-        Redacta el informe narrativo integrando los outputs de otros agentes.
+===S8===
+[Analisis de Impacto Regulatorio AIR segun metodologia OCDE: problema regulatorio identificado, objetivos de politica publica de la Medida 83, evaluacion de impactos con los datos del analisis, balance costo-beneficio de la medida vigente, indicadores de efectividad observados, conclusion del AIR. 150-200 palabras.]
 
-        Args:
-            question: Pregunta original de análisis.
-            datos_result: Texto con hallazgos cuantitativos del Agente Datos.
-            regulatorio_result: Texto con análisis regulatorio del Agente Regulatorio.
+===S9===
+[Parrafo introductorio de Conclusiones y Propuesta de Resolucion: sintesis del analisis completo y advertencia expresa de caracter preliminar. 80-100 palabras.]
 
-        Returns:
-            AgentResult con el informe narrativo completo.
-        """
-        self.logger.info("AgenteRedactor iniciando redacción del informe...")
+===S9_1===
+[Escenario A MODIFICAR LA MEDIDA: argumentos a favor y en contra de modificar el periodo de proteccion o el alcance. Que modificaciones serian procedentes dado el patron observado. 100-130 palabras.]
 
-        # Recuperar fragmentos de plantilla relevantes
-        template_docs = self.retriever.invoke(question)
+===S9_2===
+[Escenario B MANTENER LA MEDIDA: argumentos para mantener la Medida 83 sin cambios. Que elementos del analisis estadistico y regulatorio sustentan la continuidad del regimen vigente. 100-130 palabras.]
 
-        if not template_docs:
-            self.logger.warning(
-                "No se encontraron plantillas de redacción. "
-                "El agente usará estilo regulatorio estándar."
-            )
-            template_context = (
-                "No hay plantillas disponibles. Usa el estilo regulatorio formal "
-                "estándar del IFT: lenguaje técnico-jurídico, párrafos densos, "
-                "citas normativas en formato 'De conformidad con [artículo]...'."
-            )
-        else:
-            template_context = "\n\n---\n\n".join(
-                doc.page_content for doc in template_docs
-            )
+===S9_3===
+[Escenario C ELIMINAR LA MEDIDA: argumentos hipoteticos y riesgos concretos de eliminar la proteccion. Por que los indicadores potenciales observados no sustentan esta opcion en la etapa actual del mercado. 100-130 palabras.]
 
-        # Construir y ejecutar cadena LCEL
-        prompt = ChatPromptTemplate.from_template(SYSTEM_PROMPT)
-        chain = prompt | self.llm | StrOutputParser()
+===S9_4===
+[Recomendacion Institucional DG-VRA: recomendacion con advertencia expresa de que los hallazgos son preliminares, necesidad de validacion humana por personal tecnico-juridico antes de producir efectos regulatorios, y propuesta concreta de siguiente paso procesal ante el Pleno. 100-130 palabras.]
+"""
 
-        response = chain.invoke({
-            "question": question,
-            "datos_result": datos_result,
-            "regulatorio_result": regulatorio_result,
-            "template_context": template_context,
-        })
+    print("  [Llamada 2/2] Secciones 8-9 (AIR + conclusiones)...")
+    raw_b = _call(prompt_b, max_tokens=1400)
+    secs_b = _parse_sections(raw_b)
+    print(f"  Llamada 2: {len(secs_b)} secciones — {list(secs_b.keys())}")
 
-        self.logger.info(
-            f"AgenteRedactor completado. Informe: {len(response)} chars"
-        )
-
-        return AgentResult(
-            agent_name="AgenteRedactor",
-            content=response,
-            metadata={
-                "template_docs_used": len(template_docs),
-                "temperature": 0.3,
-                "question": question,
-            },
-        )
+    merged = {**secs_a, **secs_b}
+    print(f"  Total secciones generadas: {len(merged)} — {list(merged.keys())}")
+    # Serializar como texto de marcadores para word_generator
+    parts = []
+    for key, val in merged.items():
+        parts.append(f"==={key.upper()}===\n{val}")
+    return "\n\n".join(parts)

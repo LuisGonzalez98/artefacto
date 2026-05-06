@@ -1,0 +1,18 @@
+Coloca aquí tu plantilla Word (.docx) con el formato corporativo deseado.
+
+La plantilla puede incluir:
+  - Logo institucional en encabezado o portada
+  - Fuentes y estilos personalizados (Heading 1, Heading 2, Normal, etc.)
+  - Márgenes, tamaño de página y orientación
+  - Pie de página con numeración u otros elementos
+
+IMPORTANTE:
+  - El contenido de la plantilla se elimina automáticamente al generar el informe.
+    Solo se heredan los estilos y la configuración de página.
+  - Nombre recomendado: plantilla.docx (puedes usar cualquier nombre)
+
+CONFIGURACIÓN EN .env:
+  WORD_TEMPLATE=data/templates/plantilla.docx
+
+Si WORD_TEMPLATE no está definido en .env (o el archivo no existe),
+el sistema genera el documento con el formato por defecto de python-docx.
